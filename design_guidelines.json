@@ -1,0 +1,177 @@
+{
+  "app_name": "OpenBook Library",
+  "personality": "3 Editorial Mobile",
+  "personality_one_liner": "An immersive, cinematic, and deeply intellectual digital library that feels like wandering through a timeless, curated archive.",
+  "color": {
+    "surface": "#F3F0E9",
+    "onSurface": "#202020",
+    "surfaceSecondary": "#E8E4DC",
+    "onSurfaceSecondary": "#202020",
+    "surfaceTertiary": "#E2DDD2",
+    "onSurfaceTertiary": "#202020",
+    "surfaceInverse": "#171717",
+    "onSurfaceInverse": "#F3F0E9",
+    "brand": "#A58A58",
+    "brandPrimary": "#A58A58",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#C2A878",
+    "onBrandSecondary": "#202020",
+    "brandTertiary": "#EADFCD",
+    "onBrandTertiary": "#202020",
+    "success": "#4A7A59",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D9933B",
+    "onWarning": "#171717",
+    "error": "#A34343",
+    "onError": "#FFFFFF",
+    "info": "#77736D",
+    "onInfo": "#F3F0E9",
+    "border": "#D8D2C8",
+    "borderStrong": "#B8B2A8",
+    "divider": "#D8D2C8",
+    "muted": "#77736D",
+    "onBrand": "#FFFFFF"
+  },
+  "typography": {
+    "displayFontFamily": "Playfair Display",
+    "textFontFamily": "DM Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Maintain generous, editorial breathing room. Allow typographic hierarchy to stand out without boxing content into rigid cards unless necessary. Avoid cramped padding.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Feather",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Use subtle blur on the bottom tab bar to let book covers glide underneath.",
+      "Use glass headers for the 18+ After Dark section to enhance the moody cinematic feel.",
+      "Apply glass effect to the reading controls bottom sheet to maintain reading context behind it."
+    ],
+    "dont's": [
+      "Do not apply glass to actual book covers or reading pages.",
+      "Avoid heavy blur that reduces readability of editorial text."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "Hero 3D Bookshelf discovery and curated collections.",
+      "states": {
+        "loading": "Subtle pulsing bookshelf skeleton.",
+        "empty": "Elegant typography indicating no books found, with an exploration CTA.",
+        "error": "Message 'The archive is temporarily closed' with a retry button."
+      },
+      "layout": "Top features a horizontal Reanimated ScrollView representing the 3D bookshelf. Spines are visible by default. Selecting a spine uses shared element transition or reanimated transforms (rotateY to 0, scale up) to show the cover while dimming/shifting neighbors sideways. Below the hero: 'Featured', 'Mizo Heritage' and 'Explore by Category' horizontal lists with generous editorial spacing."
+    },
+    {
+      "name": "BookDetail",
+      "purpose": "Displays rich book metadata and the primary 'Read Online' CTA.",
+      "states": {
+        "loading": "Spinner centered on a warm surface background.",
+        "empty": "N/A",
+        "error": "Could not retrieve manuscript details. Retry."
+      },
+      "layout": "Full-screen or high bottom sheet. Large book cover at the top, followed by editorial layout for Title (Playfair Display), Author, Year, and Description. Availability label (READ ONLINE / BORROW) is prominent. A sticky 'Read Online' CTA at the bottom."
+    },
+    {
+      "name": "UnifiedSearch",
+      "purpose": "A powerful academic and literary search across multiple sources.",
+      "states": {
+        "loading": "Searching the archives...",
+        "empty": "Illustration of an empty vintage shelf with 'No volumes found.'",
+        "error": "Error querying the digital libraries. Retry."
+      },
+      "layout": "Sticky search bar at top. Horizontal scrollable tabs or pills for sources (Open Library, Gutenberg, DOAB). Filter row for Category, Language, Year, Availability. Results support toggleable Grid/List/Bookshelf views."
+    },
+    {
+      "name": "AfterDark18Plus",
+      "purpose": "Age-gated, visually distinct section for mature content.",
+      "states": {
+        "loading": "Dark spinner.",
+        "empty": "No titles available.",
+        "error": "Verification failed. Retry."
+      },
+      "layout": "Initial screen: Full-bleed moody library background, age confirmation checkbox, and a gold CTA. Upon entry: App theme inverses to Dark mode (#171717 background) seamlessly. Typography remains Playfair Display but glows slightly against the dark canvas."
+    },
+    {
+      "name": "OnlineReader",
+      "purpose": "Distraction-free consumption interface with high customization.",
+      "states": {
+        "loading": "Loading manuscript...",
+        "empty": "N/A",
+        "error": "Failed to load the text."
+      },
+      "layout": "Content is king. Hidden navigation by default. Tapping the center reveals a glassmorphic top header (Back, Bookmark) and a bottom sheet for customization (Theme: Warm, Cream, Sepia, Dark; Fonts: Serif/Sans/Dyslexia; Size slider 14-32; Margins)."
+    },
+    {
+      "name": "ProfileLibrary",
+      "purpose": "User's personal archive of saved and history books.",
+      "states": {
+        "loading": "Loading library...",
+        "empty": "Your shelf is empty. Start exploring.",
+        "error": "Could not sync library."
+      },
+      "layout": "Clean editorial list or grid of saved books. Minimalist tabs for 'Saved', 'History', 'Bookmarks'."
+    }
+  ],
+  "images": {
+    "hero_vintage_stack": {
+      "url": "https://images.unsplash.com/photo-1491841573634-28140fc7ced7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODh8MHwxfHNlYXJjaHwxfHxjbGFzc2ljJTIwbGl0ZXJhdHVyZSUyMGJvb2slMjBjb3ZlciUyMHZpbnRhZ2V8ZW58MHx8fHwxNzk0MTUzNDU1fDA&ixlib=rb-4.1.0&q=85",
+      "dark": "https://images.unsplash.com/photo-1491841573634-28140fc7ced7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODh8MHwxfHNlYXJjaHwxfHxjbGFzc2ljJTIwbGl0ZXJhdHVyZSUyMGJvb2slMjBjb3ZlciUyMHZpbnRhZ2V8ZW58MHx8fHwxNzk0MTUzNDU1fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "A vintage stack of classic literature books"
+    },
+    "after_dark_bg": {
+      "url": "https://images.unsplash.com/photo-1653162310127-2aa28f1b7327?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDZ8MHwxfHNlYXJjaHwxfHxkYXJrJTIwbW9vZHklMjBsaWJyYXJ5JTIwaW50ZXJpb3J8ZW58MHx8fHwxNzk0MTUzNDU1fDA&ixlib=rb-4.1.0&q=85",
+      "dark": "https://images.unsplash.com/photo-1653162310127-2aa28f1b7327?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDZ8MHwxfHNlYXJjaHwxfHxkYXJrJTIwbW9vZHklMjBsaWJyYXJ5JTIwaW50ZXJpb3J8ZW58MHx8fHwxNzk0MTUzNDU1fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Dark moody library interior"
+    },
+    "minimal_book_cover": {
+      "url": "https://images.unsplash.com/photo-1519764340700-3db40311f21e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwxfHxhZXN0aGV0aWMlMjBtaW5pbWFsJTIwYm9vayUyMGNvdmVyfGVufDB8fHx8MTc5NDE1MzQ2Nnww&ixlib=rb-4.1.0&q=85",
+      "alt": "Aesthetic minimal book cover"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the user's color palette: Main background #F3F0E9, Text #202020, Accent #A58A58, Shelf #E8E4DC. The 'After Dark 18+' section MUST override the global theme to use the Dark background #171717.",
+    "For the Dark Theme support across the app, invert the surfaces to dark grays/blacks (#171717 for background, #232323 for cards) but keep the Accent Gold (#A58A58) and ensure text is #F3F0E9.",
+    "Typography must enforce 'Playfair Display' for headings, titles, and book titles. Use 'DM Sans' for functional UI, metadata, and buttons.",
+    "The 3D Bookshelf Hero is critical. Use react-native-reanimated to create a horizontal scroll where items transform (rotateY and scale). The inactive books look like spines. When active/tapped, they rotate flat to reveal the cover.",
+    "Reader UI must be distraction-free. Controls (Theme toggles, Font pickers, Margin sliders) should be housed in a @gorhom/bottom-sheet that is only summoned when the user taps the center of the reading screen.",
+    "Use standard semantic availability labels with distinct muted/success/warning styling: READ ONLINE, READ AT SOURCE, BORROW TO READ, METADATA ONLY.",
+    "Mizo Heritage Library should feel culturally distinct. Consider adding subtle border treatments or a dedicated header typography style to elevate its presence.",
+    "Ensure all interactive text/icons over the 'After Dark' moody background image utilize the mandatory gradient-to-dark scrim pattern (Layer 1 vertical gradient to surfaceInverse) to guarantee contrast."
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "summary": "First full run. Backend: 25 pytest cases (auth, admin role checks, catalogue/search/filters, book detail for gutenberg/ia/openlibrary, reader, me-data, submissions approve/reject/duplicate, adult separation, admin CRUD/status/users/audit/stats) -> 24/25 pass; login throttling does NOT trigger 429 through the public URL (works on localhost) because the throttle key uses the ingress pod IP, which alternates. Frontend (390x844): home 3D shelf (prev/next/tap/read), sections, categories, footer, book detail (READ ONLINE / READ AT SOURCE), reader (next/prev/progress/settings sepia/size/scroll/reset/TOC/bookmark), search (fields, filter sheet, apply, list/grid/shelf, result tap), Mizo (collections, search, years, authors), auth signup, My Shelf tabs/profile edit, After Dark gate (disabled until tick, empty state), submit validation+success, admin login/dashboard/add book/save/publish via preview sheet/submission approve all work. One frontend bug: admin sub-screens opened by deep link or page reload send their first request before the admin token is restored, get a 401 and never retry, so the list stays empty. No deprecated Expo packages found.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/auth/login, /api/admin/login", "issue": "Login throttling doesn't work in the deployed setup. auth.client_key() uses request.client.host, which is the ingress pod IP, and that changes between requests (logs show 10.219.0.6 and 10.30.130.133). Fails are spread across keys, so 6+ bad passwords via the public URL all return 401 and never 429. Verified that 429 does trigger on the 6th attempt against localhost:8001. Fix: key on the email alone, or on the first X-Forwarded-For hop + email (auth.py:100-101). _fails is also in-memory only, so it is lost on restart and not shared between workers.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "GET /api/search, /api/books/openlibrary:*", "issue": "Open Library language uses langs[0] from an unordered list, so Pride and Prejudice (openlibrary:OL66554W) shows 'German'. Prefer 'eng' or the original language when present (sources.py:153-158)."},
+      {"endpoint": "GET /api/read/gutenberg:1342/meta", "issue": "TOC titles use str.title(), giving 'Chapter Ii.', 'Chapter Iii.' etc., and Chapter I is missing (TOC starts at 'Chapter Ii.' page 22) (sources.py:318-324)."},
+      {"endpoint": "PUT /api/admin/books/{id}", "issue": "_check_publish only blocks a target status of 'published'. An editor can unpublish or archive a published book through PUT, and can edit a published book's content in place, while POST /status is admin-only. The rules are inconsistent (server.py:715-738)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Admin submissions/users screens", "issue": "Opening /admin/submissions or /admin/users by URL or after a page reload: useFocusEffect(load) runs before AdminProvider restores the admin token from storage. The request goes out with no token, gets a 401 (backend logs: GET /api/admin/submissions?status=pending 401, GET /api/admin/users?q= 401) and is never retried, so the list stays empty (0 rows) with no error. It works when reached from the dashboard modules. Fix: add admin/ready to load's deps or wait for ready (app/admin/submissions.tsx:29-33, app/admin/users.tsx:31; check books.tsx/audit.tsx too).", "testID": "admin-submissions-screen, admin-users-screen", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home", "issues": ["Touch targets under 44px: featured-see-all 33x29, intl-chip-* 36px high, footer-* 40px high"]},
+      {"screen": "After Dark", "issues": ["Empty state repeats: a top 'No titles have been published here yet' card plus 'No titles yet.' under each of the 6 categories. Hide the empty categories when there are no books."]},
+      {"screen": "Mizo", "issues": ["The eyebrow 'MIZO HERITAGE LIBRARY' repeats the big title 'MIZO HERITAGE LIBRARY' right below it"]},
+      {"screen": "Search", "issues": ["Once, after filter apply and view switching, the screen looked shifted left about 24px and the filter button was clipped at the right edge. Not reproduced on a fresh load (button right=366 of 390). Check for horizontal overflow in the header row / field-chip ScrollView."]},
+      {"screen": "Reader", "issues": ["Paragraph reflow merges Gutenberg front-matter contents lists into one block of text (Alice: all chapters on one run-on line)"]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_openbook_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Fix the login throttle key so it doesn't depend on the ingress pod IP (auth.py client_key: use email, or X-Forwarded-For first hop + email), and consider storing fails in Mongo",
+    "Admin sub-screens: reload data once the admin token is restored (deps on admin/ready) so deep links and reloads of /admin/submissions and /admin/users show data",
+    "Open Library language: choose 'eng'/original rather than langs[0]",
+    "Reader TOC: keep roman numerals uppercase (don't use str.title()) and detect Chapter I in gutenberg:1342",
+    "Make the editor permissions consistent (block unpublish/archive via PUT for editors, or document it)",
+    "Raise touch targets to at least 44px (intl chips, footer links, featured-see-all); remove the repeated After Dark empty messages and the repeated Mizo heading"
+  ],
+  "critical_code_review_comments": [
+    "auth.py throttle is an in-memory dict keyed by request.client.host, which is wrong behind a proxy and not durable",
+    "server.py is 860 lines; consider splitting it into routers (auth, catalogue, reader, me, admin)",
+    "POST /api/auth/forgot-password stores reset tokens even though no email provider exists; the 'not switched on' message is honest (email_configured=false confirmed)",
+    "Approving a submission whose duplicate_of is set still creates a second published book; the duplicate is only flagged in the UI"
+  ],
+  "updated_files": ["/app/backend/tests/test_openbook_api.py (new)"],
+  "success_rate": {"backend": "96% (24/25)", "frontend": "~95% (all requested flows work; admin deep-link/reload empty-list bug)"},
+  "seed_data_creation": "Created TEST_ reader users (test_*@example.com; no user-delete API, so they remain; one test editor user was disabled). Created TEST_ books and submissions; every TEST_ book was deleted by id afterwards (admin books q=TEST_ returns []). Submission records (approved/rejected) remain because there is no delete endpoint. No seed or real data was modified.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: EXPO_PUBLIC_BACKEND_URL=<frontend/.env value> pytest /app/backend/tests/test_openbook_api.py (pytest-xdist runs in parallel by default, so each test cleans up its own data). frontend/.env uses EXPO_PUBLIC_BACKEND_URL (no EXPO_BACKEND_URL). Admin login on the frontend is per-session; reach the admin sub-screens through the dashboard admin-module-* buttons. Admin edit form: hosted_text needs copyright public_domain/open_licence/permission_granted (edit-copyright-public_domain). Fresh DB has 0 local books.",
+  "rca_of_issue": "Throttle: the backend log shows public-URL login attempts coming from 2 alternating ingress IPs, so key 'ip:email' never reaches 5 fails; on localhost a single IP gives 401x5 then 429. Admin empty lists: submissions.tsx load() useCallback deps=[status] only and is called in useFocusEffect on mount, while admin-context restores the token asynchronously (setAdminToken in useEffect). The first call has session.admin=null, so it gets a 401 and there is no re-run when admin becomes available."
+}
