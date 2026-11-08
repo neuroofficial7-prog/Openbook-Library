@@ -1,5 +1,6 @@
 """OpenBook Library API (FastAPI + MongoDB). All routes are under /api."""
 import asyncio
+import html
 import logging
 import os
 import re
@@ -7,12 +8,13 @@ from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal, Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import httpx
 from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from pymongo import ASCENDING, DESCENDING, IndexModel
@@ -407,6 +409,66 @@ async def book_detail(book_id: str, x_age_confirmed: Optional[str] = Header(None
         desc = (data or {}).get("description")
         b["description"] = (desc.get("value") if isinstance(desc, dict) else desc or "")[:900]
     return b
+
+
+# ======================= SHARE PAGES (social previews) =======================
+def _public_base(request: Request) -> str:
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme).split(",")[0].strip()
+    host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc)).split(",")[0].strip()
+    return f"{proto}://{host}"
+
+
+@api.get("/share/{book_id}", response_class=HTMLResponse, include_in_schema=False)
+async def share_page(book_id: str, request: Request):
+    """Public, SEO/social-preview friendly page for a book (Open Graph + Twitter cards).
+    Adult titles are never exposed here."""
+    try:
+        b = await get_book(book_id, allow_adult=False)
+    except HTTPException:
+        return HTMLResponse("<!doctype html><title>OpenBook Library</title><p style='font-family:serif;padding:40px'>This book is not available.</p>", status_code=404)
+    e = html.escape
+    base = _public_base(request)
+    url = f"{base}/api/share/{quote(book_id, safe='')}"
+    desc = (b.get("description") or f"{b['title']} by {b['author']} — discover it on OpenBook Library.")[:280]
+    cover = b.get("cover_url") or ""
+    read = b.get("reader_url") or b.get("source_url") or ""
+    year = b.get("publication_year") or b.get("author_years") or ""
+    meta = " · ".join(str(x) for x in [year, b.get("language"), b.get("source_name")] if x)
+    app_link = f"openbook://book/{quote(book_id, safe='')}"
+    page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{e(b['title'])} — {e(b['author'])} | OpenBook Library</title>
+<meta name="description" content="{e(desc)}">
+<link rel="canonical" href="{e(url)}">
+<meta property="og:type" content="book"><meta property="og:site_name" content="OpenBook Library">
+<meta property="og:title" content="{e(b['title'])} — {e(b['author'])}"><meta property="og:description" content="{e(desc)}">
+<meta property="og:url" content="{e(url)}">{f'<meta property="og:image" content="{e(cover)}">' if cover else ''}
+<meta name="twitter:card" content="{'summary_large_image' if cover else 'summary'}"><meta name="twitter:title" content="{e(b['title'])}">
+<meta name="twitter:description" content="{e(desc)}">{f'<meta name="twitter:image" content="{e(cover)}">' if cover else ''}
+<style>
+body{{margin:0;background:#F3F0E9;color:#202020;font-family:Georgia,'Times New Roman',serif}}
+.w{{max-width:560px;margin:0 auto;padding:32px 24px 48px}}
+.m{{font:600 11px/1 system-ui,sans-serif;letter-spacing:3px;color:#A58A58;text-transform:uppercase}}
+.shelf{{background:#E8E4DC;margin:24px -24px;padding:32px 0 0;text-align:center}}
+.shelf img{{width:180px;box-shadow:0 18px 30px rgba(0,0,0,.3);border-radius:3px;display:block;margin:0 auto}}
+.plank{{height:14px;background:#CFC6B6;margin-top:-2px}}
+h1{{font-size:34px;line-height:1.15;margin:16px 0 4px;font-weight:400}} .a{{font-style:italic;font-size:19px}}
+.meta{{font:13px system-ui,sans-serif;color:#77736D;margin-top:10px}} p{{font:16px/1.6 system-ui,sans-serif}}
+.badge{{display:inline-block;border:1px solid #4A7A59;color:#4A7A59;border-radius:99px;padding:4px 10px;font:700 10px system-ui,sans-serif;letter-spacing:1px;margin-top:14px}}
+.btn{{display:block;text-align:center;text-decoration:none;border-radius:99px;padding:15px;font:700 13px system-ui,sans-serif;letter-spacing:1.4px;text-transform:uppercase;margin-top:12px}}
+.p{{background:#202020;color:#F3F0E9}} .s{{border:1px solid #B8B2A8;color:#202020}}
+.f{{font:12px/1.6 system-ui,sans-serif;color:#77736D;margin-top:28px}}
+</style></head><body><main class="w">
+<div class="m">OpenBook Library</div>
+{f'<div class="shelf"><img src="{e(cover)}" alt="Cover of {e(b["title"])}"><div class="plank"></div></div>' if cover else ''}
+<h1>{e(b['title'])}</h1><div class="a">{e(b['author'])}</div>
+<div class="meta">{e(meta)}</div><span class="badge">{e(b['availability'])}</span>
+<p>{e(desc)}</p>
+<a class="btn p" href="{e(app_link)}">Open in OpenBook</a>
+{f'<a class="btn s" href="{e(read)}" rel="noopener">View at {e(b["source_name"])}</a>' if read else ''}
+<div class="f">Rights: {e(b.get('licence') or 'Not stated by source')}<br>Discover Stories. Explore Knowledge. Read Without Boundaries.</div>
+</main></body></html>"""
+    return HTMLResponse(page, headers={"Cache-Control": "public, max-age=3600"})
 
 
 @api.get("/after-dark")

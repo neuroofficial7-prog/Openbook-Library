@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
@@ -9,6 +9,7 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { api, Book } from "@/src/api";
 import { useAuth } from "@/src/auth-context";
 import { BookCover } from "@/src/components/BookCover";
+import { ShareSheet } from "@/src/components/ShareSheet";
 import { AvailabilityBadge, Button, Eyebrow, IconButton, StateView } from "@/src/components/ui";
 import { fonts, makeStyles, space, useTheme } from "@/src/theme";
 import { useToast } from "@/src/toast";
@@ -24,6 +25,7 @@ export default function BookDetail() {
   const bookId = decodeURIComponent(String(id));
   const q = useQuery({ queryKey: ["book", bookId], queryFn: () => api<Book>(`/books/${encodeURIComponent(bookId)}`) });
   const [saved, setSaved] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     if (user) api<{ book_id: string }[]>("/me/saved").then((l) => setSaved(l.some((x) => x.book_id === bookId))).catch(() => {});
@@ -59,7 +61,7 @@ export default function BookDetail() {
       <View style={[styles.top, { paddingTop: insets.top + space.xs }]}>
         <IconButton testID="book-back-button" name="arrow-left" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
         <View style={{ flex: 1 }} />
-        {b && <IconButton testID="book-share-button" name="share" onPress={() => Share.share({ message: `${b.title} by ${b.author} — on OpenBook Library. ${b.source_url ?? ""}` })} />}
+        {b && !b.adult_content && <IconButton testID="book-share-button" name="share" onPress={() => setSharing(true)} />}
         {b && <IconButton testID="book-save-button" name="bookmark" color={saved ? colors.brandPrimary : colors.onSurface} onPress={toggleSave} />}
       </View>
       {q.isLoading && <StateView testID="book-loading" kind="loading" />}
@@ -98,6 +100,7 @@ export default function BookDetail() {
             </View>
           </ScrollView>
           <View style={[styles.bar, { paddingBottom: insets.bottom + space.md }]}>{cta()}</View>
+          {!b.adult_content && <ShareSheet book={b} visible={sharing} onClose={() => setSharing(false)} />}
         </>
       )}
     </View>
